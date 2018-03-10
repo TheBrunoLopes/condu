@@ -1,0 +1,13 @@
+*.pyc
+.idea
+venv
+biovenv
+build/
+dist/
+*.egg-info/
+*.egg
+*.py[cod]
+__pycache__/
+*.so
+*~
+.cache
