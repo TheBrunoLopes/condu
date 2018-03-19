@@ -7,7 +7,7 @@ conductor_endpoint = 'http://localhost:8080/api'
 
 def create_multiple_workflow_versions():
     cw = Condu(conductor_endpoint)
-    for i in range(1, 51):
+    for i in range(1, 11):
         sample_workflow_def(sample_workflow_name, i, cw)
 
 
@@ -44,7 +44,7 @@ def test_running_worflows():
 # Check if when retrieving a workflow from conductor (without specifying version) we get the latest version
 def test_workflow_versioning():
     wf = get_last_workflow_version()
-    assert wf['version'] == 50
+    assert wf['version'] == 10
 
 
 if __name__ == '__main__':
