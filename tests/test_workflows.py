@@ -5,7 +5,7 @@ sample_workflow_name = 'sample_workflow'
 conductor_endpoint = 'http://localhost:8080/api'
 
 
-def test_multiple_workflow_versions():
+def create_multiple_workflow_versions():
     cw = Condu(conductor_endpoint)
     for i in range(1, 51):
         sample_workflow_def(sample_workflow_name, i, cw)
@@ -13,23 +13,39 @@ def test_multiple_workflow_versions():
 
 def start_last_workflow_version():
     cw = Condu(conductor_endpoint)
-    cw.start_workflow(sample_workflow_name)
+    return cw.start_workflow(sample_workflow_name)
 
 
 def get_last_workflow_version():
     cw = Condu(conductor_endpoint)
-    workflow = cw.metadata_client.getWorkflowDef(sample_workflow_name)
+    return cw.metadata_client.getWorkflowDef(sample_workflow_name)
 
 
-def get_running_workflows_last_version():
+def get_running_workflows():
     cw = Condu(conductor_endpoint)
-    workflows = cw.workflow_client.getRunningWorkflows(sample_workflow_name)
+    return cw.workflow_client.getRunningWorkflows(sample_workflow_name)
+
+
+# Create a workflow and check if it was created
+def test_workflows_creation():
+    create_multiple_workflow_versions()
+    wf = get_last_workflow_version()
+    assert wf['name'] == sample_workflow_name
+
+
+# Start a workflow and see if it's in the list of running workflows
+def test_running_worflows():
+    w_id = start_last_workflow_version()
+    assert type(w_id) is str
+    w_list = get_running_workflows()
+    assert w_id in w_list
+
+
+# Check if when retrieving a workflow from conductor (without specifying version) we get the latest version
+def test_workflow_versioning():
+    wf = get_last_workflow_version()
+    assert wf['version'] == 50
 
 
 if __name__ == '__main__':
-    test_multiple_workflow_versions()
-    start_last_workflow_version()
-    get_last_workflow_version()
-    condu = Condu(conductor_endpoint)
-    condu.start_workflow(sample_workflow_name, version=5)
-    get_running_workflows_last_version()
+    test_workflows_creation()
