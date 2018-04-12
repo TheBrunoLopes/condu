@@ -33,10 +33,9 @@ def main():
     sample_workflow.description = 'Calculate ((foo + bar) / (foo * bar)) in parallel'
     sample_workflow.inputParameters = ['foo', 'bar']
     sample_workflow.version = 1
-    sample_workflow.outputParameters = {'result': "${sample_task_division.output.result}"}
-
+    # "${sample_task_division.output.result}" is equal to wt_div.get_path('result')
+    sample_workflow.outputParameters = {'result': wt_div.get_path('result')}
     sample_workflow.tasks = [wt_fork, wt_join, wt_div]
-
     cw.create_workflow(sample_workflow)
 
 
