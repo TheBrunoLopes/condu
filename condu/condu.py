@@ -125,8 +125,9 @@ class Condu(WFClientMgr):
 
     # ------------------ ******************* ------------------
     # ------------------    Workflow UTILS   ------------------
-    def get_task_from_workflow(self, workflow_id, task_ref):
-        workflow = self.get_workflow(workflow_id)
+    def get_task_from_workflow(self, workflow, task_ref):
+        if workflow is str:
+            workflow = self.get_workflow(workflow)
         for task in workflow.get('tasks'):
             if task.get('referenceTaskName') == task_ref:
                 return task
