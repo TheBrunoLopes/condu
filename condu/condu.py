@@ -96,7 +96,7 @@ class Condu(WFClientMgr):
         try:
             exec_function(condu_task)
         except Exception as err:
-            condu_task.status('FAILED')
+            condu_task.status = 'FAILED'
             condu_task.append_to_logs(str(err))
             logger.error('Task set as FAILED', exc_info=True)
         self.task_client.updateTask(condu_task.get_dict())
