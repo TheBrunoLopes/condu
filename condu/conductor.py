@@ -162,6 +162,10 @@ class TaskClient(BaseClient):
         url = self.makeUrl('{}', taskId)
         return self.get(url)
 
+    def get_task_logs(self, taskId):
+        url = self.makeUrl('{}/log', taskId)
+        return self.get(url)
+
     def updateTask(self, taskObj):
         url = self.makeUrl('')
         self.post(url, None, taskObj)

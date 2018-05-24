@@ -130,6 +130,8 @@ class Condu(WFClientMgr):
             workflow = self.get_workflow(workflow)
         for task in workflow.get('tasks'):
             if task.get('referenceTaskName') == task_ref:
+                if task['status'] == 'FAILED':
+                    task['logs'] = self.task_client.get_task_logs(task['taskId'])
                 return task
         return None
 
