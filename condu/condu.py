@@ -60,7 +60,7 @@ class Condu(WFClientMgr):
         if callable(term_handler):
             self.term_handler = term_handler
 
-    def start_tasks(self, polling_interval: float = 0.1, processes: int = 1, term_handler: callable = None,
+    def start_tasks(self, polling_interval: float = 0.33, processes: int = 1, term_handler: callable = None,
                     term_signal: int = None):
 
         """ Blocking method, creates <processes> child processes for each task; each process polls and executes the task in
