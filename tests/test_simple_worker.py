@@ -1,28 +1,36 @@
-import signal
-
 from condu import Condu
 
+simple_task_name = 'task_5'
+another_simple_task_name = 'task_6'
+simple_workflow_name = 'sub_flow_1'
+endpoint = 'http://localhost:8080/api'
 
-def cleanup(tlist):
-    # function called when unblocking start_tasks
-    print("This function is called for each proccess")
 
-
-def simple_task(task):
+def task_worker(task):
+    assert task.status == 'IN_PROGRESS'
+    assert task.taskDefName.startswith('task_')
     task.status = 'COMPLETED'
-    task.outputData = {'testing': 'this'}
-    task.append_to_logs('logging information')
 
 
-def test_starting():
-    cw = Condu('http://localhost:8080/api')
-    cw.start_workflow('sub_flow_1')
-    cw.put_task('task_5', simple_task)
-    cw.put_task('task_6', simple_task)
-    # This line starts the tasks with 1 process for each task. When we do CTRL + C (SIGINT)
-    # we run cleanup function for each process and unblock start_tasks
-    cw.start_tasks(polling_interval=0.1, processes=1, term_handler=cleanup)
+# start a workflow and check if it's running
+def test_start_workflow():
+    cw = Condu(endpoint)
+    w_id = cw.start_workflow(simple_workflow_name)
+    w_list = cw.workflow_client.getRunningWorkflows(simple_workflow_name)
+    assert w_id in w_list
+
+
+# poll for a task in the previous workflow
+def test_simple_task_execution():
+    cw = Condu(endpoint)
+    cw.poll_and_execute_task(simple_task_name, task_worker)
+
+
+# Poll for another task in that workflow that is only scheduled if simple_task was completed
+def test_another_simple_task():
+    cw = Condu(endpoint)
+    cw.poll_and_execute_task(another_simple_task_name, task_worker)
 
 
 if __name__ == '__main__':
-    test_starting()
+    test_simple_task_execution()

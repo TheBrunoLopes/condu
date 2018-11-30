@@ -1,0 +1,17 @@
+• Test data: inputs which have been devised to test the
+system.
+
+• Test cases: inputs to test the system and the predicted
+outputs from these inputs if the system operates according
+to its specification 
+
+
+
+• White-box (Glass-box or Structural) testing: testing
+techniques that use the source code as the point of reference
+for test selection and adequacy. Structural testing includes
+control flow testing and data flow testing.
+– a.k.a. program-based testing, structural testing
+• Black-box (or functional) testing: testing techniques that
+use the functional specification as the point of reference for
+test selection and adequacy.

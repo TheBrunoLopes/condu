@@ -125,6 +125,9 @@ class WorkflowDef(object):
         _dict['tasks'] = [task.get_dict() for task in self.tasks]
         return _dict
 
+    def get_path(self, path, put='input') -> str:
+        return '${workflow.'+put+'.'+path+'}'
+
 
 class WorkflowTaskDef(object):
     def __init__(self, name: str, task_reference: str = None, description: str = None, input_parameters: dict = None,
@@ -149,6 +152,8 @@ class WorkflowTaskDef(object):
     def get_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items() if v is not None}
 
+    def get_path(self, path, put='output') -> str:
+        return '${'+self.taskReferenceName+'.'+put+'.'+path+'}'
 
 # --------------- **************** ----------------------
 # ---------------   SYSTEM TASKS   ----------------------

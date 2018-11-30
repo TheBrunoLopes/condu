@@ -72,6 +72,7 @@ class BaseClient:
 
         self.__print(resp)
         self.__checkForSuccess(resp)
+        return resp
 
     def delete(self, resPath, queryParams):
         theUrl = "{}/{}".format(self.baseURL, resPath)
@@ -124,7 +125,7 @@ class MetadataClient(BaseClient):
 
     def updateWorkflowDefs(self, listOfWfdObj):
         url = self.makeUrl('workflow')
-        self.put(url, None, listOfWfdObj)
+        return self.put(url, None, listOfWfdObj)
 
     def getAllWorkflowDefs(self):
         url = self.makeUrl('workflow')
@@ -159,6 +160,10 @@ class TaskClient(BaseClient):
 
     def getTask(self, taskId):
         url = self.makeUrl('{}', taskId)
+        return self.get(url)
+
+    def get_task_logs(self, taskId):
+        url = self.makeUrl('{}/log', taskId)
         return self.get(url)
 
     def updateTask(self, taskObj):

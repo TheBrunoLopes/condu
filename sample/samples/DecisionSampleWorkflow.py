@@ -8,7 +8,7 @@ def main():
     cw.create_tasks(sample_task_definitions())
 
     # rand, addition and multiplication tasks
-    wt_rand = WorkflowTaskDef('sample_heads_or_tails', 'sample_heads_or_tails', 'This task generates randoms', {})
+    wt_rand = WorkflowTaskDef('sample_heads_or_tails')
 
     wt_add = WorkflowTaskDef('sample_task_addition')
     wt_add.inputParameters = {'foo': "${workflow.input.foo}", 'bar': "${workflow.input.bar}"}
@@ -17,7 +17,7 @@ def main():
     wt_mult.inputParameters = {'foo': '${workflow.input.foo}', 'bar': '${workflow.input.bar}'}
     # --------------------------------------------------------------------------------------------------
     # Decision task
-    wt_decision = DecisionTaskDef('decision', description= 'Decides where to go depending on coin toss')
+    wt_decision = DecisionTaskDef('decision', description='Decides where to go depending on coin toss')
     wt_decision.inputParameters['coin'] = '${sample_heads_or_tails.output.result}'
     wt_decision.caseValueParam = 'coin'
     wt_decision.decisionCases['heads'] = [wt_add]

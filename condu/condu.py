@@ -96,7 +96,7 @@ class Condu(WFClientMgr):
         try:
             exec_function(condu_task)
         except Exception as err:
-            condu_task.status('FAILED')
+            condu_task.status = 'FAILED'
             condu_task.append_to_logs(str(err))
             logger.error('Task set as FAILED', exc_info=True)
         self.task_client.updateTask(condu_task.get_dict())
@@ -122,6 +122,18 @@ class Condu(WFClientMgr):
 
     def resume_workflow(self, workflow_id):
         self.workflow_client.resumeWorkflow(workflow_id)
+
+    # ------------------ ******************* ------------------
+    # ------------------    Workflow UTILS   ------------------
+    def get_task_from_workflow(self, workflow, task_ref):
+        if workflow is str:
+            workflow = self.get_workflow(workflow)
+        for task in workflow.get('tasks'):
+            if task.get('referenceTaskName') == task_ref:
+                if task['status'] == 'FAILED':
+                    task['logs'] = self.task_client.get_task_logs(task['taskId'])
+                return task
+        return None
 
     # ------------------ **************** ------------------
     # ------------------ Task Definitions ------------------

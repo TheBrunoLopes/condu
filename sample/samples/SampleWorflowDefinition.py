@@ -13,13 +13,13 @@ def sample_workflow_def(name: str, version: int, cw):
     sample_workflow.version = version
     sample_workflow.outputParameters = {'result': "${sample_task_division.output.result}"}
     # Defining the first task for the workflow ( addition )
-    wt_add = WorkflowTaskDef('sample_task_addition', 'sample_task_addition', 'addition_task', {})
+    wt_add = WorkflowTaskDef('sample_task_addition')
     wt_add.inputParameters = {'foo': "${workflow.input.foo}", 'bar': "${workflow.input.bar}"}
 
-    wt_mult = WorkflowTaskDef('sample_task_multiplication', 'sample_task_multiplication', 'multiplication task', {})
+    wt_mult = WorkflowTaskDef('sample_task_multiplication')
     wt_mult.inputParameters = {'foo': '${workflow.input.foo}', 'bar': '${workflow.input.bar}'}
 
-    wt_div = WorkflowTaskDef('sample_task_division', 'sample_task_division', 'division task', {})
+    wt_div = WorkflowTaskDef('sample_task_division')
     wt_div.inputParameters = {'add_res': '${sample_task_addition.output.result}',
                               'mult_res': '${sample_task_multiplication.output.result}'}
 
