@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class Condu(WFClientMgr):
-    def __init__(self, server_url: str, hostname: str = socket.gethostname()):
+    def __init__(self, server_url: str, hostname: str = socket.gethostname(), signum=signal.SIGINT):
         super().__init__(server_url)
         self.tasks = {}
         self.hostname = hostname
@@ -23,7 +23,7 @@ class Condu(WFClientMgr):
         self.term_handler = lambda tasks: tasks
         # original handler
         self._signal_handler = None
-        self._signum = signal.SIGINT
+        self._signum = signum
         # ----------------------
 
     # This function is called with _signum so that the blocking call start_tasks() can be unblocked
