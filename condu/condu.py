@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class Condu(WFClientMgr):
-    def __init__(self, server_url: str, hostname: str = socket.gethostname(), signum=signal.SIGINT):
+    def __init__(self, server_url: str, hostname: str = socket.gethostname(), signum=signal.SIGTERM):
         super().__init__(server_url)
         self.tasks = {}
         self.hostname = hostname
