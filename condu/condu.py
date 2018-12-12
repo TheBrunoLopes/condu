@@ -2,6 +2,7 @@ import signal
 import socket
 import time
 from threading import Event
+import sys
 
 from condu.objects import MetaTask, TaskDef, WorkflowDef
 from condu.conductor import WFClientMgr
@@ -33,9 +34,9 @@ class Condu(WFClientMgr):
             condu_task = MetaTask(self._conductor_task)
             condu_task.status = 'FAILED'
             condu_task.append_to_logs("Task FAILED due to worker shutdown.")
-            logger.error('Task set as FAILED due to worker shutdown.', exc_info=True)
             self.task_client.updateTask(condu_task.get_dict())
-        exit(0)
+            logger.error('Task set as FAILED due to worker shutdown.', exc_info=True)
+        sys.exit(0)
 
     # This function is called with _signum so that the blocking call start_tasks() can be unblocked
     def __parent_signal_handler(self, signum, frame):
@@ -51,8 +52,9 @@ class Condu(WFClientMgr):
             # For the TypeError we could stop start_tasks
             # but for an unknown error we can't because term_handler() failed executing
             logger.error(exc)
-        self._shutdown_event.set()
-        exit(0)
+        finally:
+            self._shutdown_event.set()
+            sys.exit(0)
 
     # ------------------ *************** ------------------
     # ------------------ Task Management ------------------
