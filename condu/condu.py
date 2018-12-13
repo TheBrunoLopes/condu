@@ -81,7 +81,7 @@ class Condu(WFClientMgr):
         """
         self._processes_list = []
         self.__signal_definitions(child_signal_handler, signum)
-        mp.set_start_method("fork")
+        # mp.set_start_method("fork")
         for task in self.tasks:
             exec_function = self.tasks[task]
             for i in range(processes):
