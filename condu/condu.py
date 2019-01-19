@@ -3,6 +3,7 @@ import socket
 import time
 from threading import Event
 import sys
+import gc
 
 from condu.objects import MetaTask, TaskDef, WorkflowDef
 from condu.conductor import WFClientMgr
@@ -22,20 +23,38 @@ class Condu(WFClientMgr):
         # variables that gracefully allows to stop start_tasks()
         # handler supplied on start_tasks
         self._child_signal_handler = self.__terminate_task
+        self._intermediate_signal_handler = self.__intermediate_signal_handler
         # original handler
         self._signum = signum
         self._conductor_task = None
         self._processes_list = None
+        # save child process of intermediate process
+        self._child_process = None
+        # save worker task received by pipe from child process / worker
+        self._worker_task_from_child = None
         # ----------------------
 
-    # used to terminate current _condu_task if the process has any
+    # used to terminate current _condu_task if the worker process has any
     def __terminate_task(self):
-        if self._conductor_task is not None:
-            condu_task = MetaTask(self._conductor_task)
-            condu_task.status = 'FAILED'
-            condu_task.append_to_logs("Task FAILED due to worker shutdown.")
-            self.task_client.updateTask(condu_task.get_dict())
-            logger.error('Task set as FAILED due to worker shutdown.', exc_info=True)
+        try:
+            if self._conductor_task is not None:
+                condu_task = MetaTask(self._conductor_task)
+                condu_task.status = 'FAILED'
+                condu_task.append_to_logs("Task FAILED due to worker shutdown.")
+                self.task_client.updateTask(condu_task.get_dict())
+                logger.error('Task set as FAILED due to worker shutdown.', exc_info=True)
+        except Exception:
+            # If we can't update worker task we are sorry but we really need to shutdown the process.
+            pass
+        sys.exit(0)
+
+    # used to terminate intermediate process on SIGTERM
+    def __intermediate_signal_handler(self):
+        try:
+            self._child_process.terminate()
+        except Exception:
+            # If we can't terminate a daemon child process it will terminate by himself if isn't terminated yet
+            pass
         sys.exit(0)
 
     # This function is called with _signum so that the blocking call start_tasks() can be unblocked
@@ -43,7 +62,7 @@ class Condu(WFClientMgr):
         try:
             for process in self._processes_list:
                 process.terminate()
-                print("Child Process terminated")
+                logger.info("Intermediate Process terminated")
         except TypeError as terr:
             # It means the handler is not callable or that it doesn't take 1 required parameter
             # Producing a warning and stopping start_tasks anyway
@@ -72,6 +91,48 @@ class Condu(WFClientMgr):
             self._child_signal_handler = child_signal_handler
         signal.signal(self._signum, self.__parent_signal_handler)
 
+    def __intermediate_process(self, task, exec_function, polling_interval):
+        def child_process_shutdown(signum, frame):
+            self._intermediate_signal_handler()
+
+        # Sets the handler for SIGTERM in the child process. SIGTERM can be triggered in parent process.
+        signal.signal(signal.SIGTERM, child_process_shutdown)
+
+        process_name = mp.current_process().name
+
+        while True:
+            logger.info("{} is going to create a child process (worker).".format(process_name))
+            conn1, conn2 = mp.Pipe(duplex=False)
+            self._child_process = mp.Process(target=self.__start_task, args=(task, exec_function, polling_interval, conn2))
+            self._child_process.daemon = True
+            self._child_process.start()
+            # This needs to be closed in parent process, so that we can have a EOFError raised when child closes the pipe.
+            conn2.close()
+            self._worker_task_from_child = None
+            try:
+                while True:
+                    self._worker_task_from_child = conn1.recv()
+            except EOFError as eof:
+                logger.error("{} received EOFError.".format(process_name))
+                if self._worker_task_from_child is not None:
+                    condu_task = MetaTask(self._worker_task_from_child)
+                    condu_task.status = 'FAILED'
+                    condu_task.append_to_logs("Task FAILED due to worker shutdown.")
+                    self.task_client.updateTask(condu_task.get_dict())
+                    logger.error('Task set as FAILED due to worker shutdown.', exc_info=True)
+                    gc.collect()
+            except Exception as e:
+                logger.error("{} received generic Exception.".format(process_name))
+                if self._worker_task_from_child is not None:
+                    condu_task = MetaTask(self._worker_task_from_child)
+                    condu_task.status = 'FAILED'
+                    condu_task.append_to_logs("Task FAILED due to unknown exception in worker.")
+                    self.task_client.updateTask(condu_task.get_dict())
+                    logger.error('Task set as FAILED due to unknown exception in worker.', exc_info=True)
+                    gc.collect()
+            conn1.close()
+            self._child_process.join()
+
     def start_tasks(self, polling_interval: float = 0.2, processes: int = 1, child_signal_handler: callable = None,
                     signum: int = None):
 
@@ -81,35 +142,37 @@ class Condu(WFClientMgr):
         """
         self._processes_list = []
         self.__signal_definitions(child_signal_handler, signum)
-        # mp.set_start_method("fork")
         for task in self.tasks:
             exec_function = self.tasks[task]
             for i in range(processes):
-                process = mp.Process(target=self.__start_task, args=(task, exec_function, polling_interval))
-                process.daemon = True
-                # https://docs.python.org/3.4/library/multiprocessing.html?highlight=process#multiprocessing.Process
+                # create intermediate process to launch child process to process condu task as discussed in issue #001
+                process = mp.Process(target=self.__intermediate_process, args=(task, exec_function, polling_interval))
                 process.start()
                 self._processes_list.append(process)
-        # This is a blocking call that blocks this thread (main one) until shutdown_event.set() is called
+        # This is a blocking call that blocks this thread/process (main one) until shutdown_event.set() is called
         self._shutdown_event.wait()
 
-    def __start_task(self, task_name, exec_function, polling_interval):
+    def __start_task(self, task_name, exec_function, polling_interval, pipe):
         def child_process_shutdown(signum, frame):
             self._child_signal_handler()
 
         # Sets the handler for SIGTERM in the child process. SIGTERM can be triggered in parent process.
         signal.signal(signal.SIGTERM, child_process_shutdown)
 
-        while 1:
-            self.poll_and_execute_task(task_name, exec_function)
+        while True:
+            self.poll_and_execute_task(task_name, exec_function, pipe)
             time.sleep(polling_interval)
 
-    def poll_and_execute_task(self, task_name, exec_function):
+    def poll_and_execute_task(self, task_name, exec_function, pipe):
         # Insert the polling cycle here
         logger.debug('Polling for [' + task_name + '] as [' + self.hostname + ']')
         self._conductor_task = self.task_client.pollForTask(task_name, self.hostname)
         if self._conductor_task is not None:
+            # Send conductor task through pipe before start working on it
+            pipe.send(self._conductor_task)
             self.__execute_task(self._conductor_task, exec_function)
+            # Send None when finish working on conductor task
+            pipe.send(None)
 
     def __execute_task(self, conductor_task, exec_function):
         """ Executes the exec_function and updates the task status in conductor """
@@ -120,6 +183,7 @@ class Condu(WFClientMgr):
             condu_task.status = 'FAILED'
             condu_task.append_to_logs(str(err))
             logger.error('Task set as FAILED', exc_info=True)
+            gc.collect()
         self.task_client.updateTask(condu_task.get_dict())
         logger.info("[" + condu_task.status + "] [" + condu_task.referenceTaskName + "]-[" + condu_task.taskId + "]-[" +
                     condu_task.status + "] in the workflow - [" + condu_task.workflowInstanceId + "]")
