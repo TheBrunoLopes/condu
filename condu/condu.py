@@ -169,10 +169,11 @@ class Condu(WFClientMgr):
         self._conductor_task = self.task_client.pollForTask(task_name, self.hostname)
         if self._conductor_task is not None:
             # Send conductor task through pipe before start working on it
-            pipe.send(self._conductor_task)
-            self.__execute_task(self._conductor_task, exec_function)
-            # Send None when finish working on conductor task
-            pipe.send(None)
+            if self.task_client.ackTask(self._conductor_task['taskId'], self.hostname):
+                pipe.send(self._conductor_task)
+                self.__execute_task(self._conductor_task, exec_function)
+                # Send None when finish working on conductor task
+                pipe.send(None)
 
     def __execute_task(self, conductor_task, exec_function):
         """ Executes the exec_function and updates the task status in conductor """
