@@ -29,4 +29,4 @@ def sample_workflow_def(name: str, version: int, cw):
 
 if __name__ == '__main__':
     condu = Condu('http://localhost:8080/api')
-    sample_workflow_def('sample_condu3_workflow', 1, condu)
+    sample_workflow_def('heads_or_tails_workflow', 1, condu)
