@@ -185,9 +185,11 @@ class TaskClient(BaseClient):
         url = self.makeUrl('{}/ack', taskId)
         params = {}
         params['workerid'] = workerid
-        headers = {'Accept': 'text/plain'}
+        # This is strange, but sending text/plain will result in a 500 from
+        # Conductor. application/json works, but a string is returned back.
+        headers = {'Accept': 'application/json'}
         value = self.post(url, params, None, headers)
-        return value == 'true'
+        return value
 
     def getTasksInQueue(self, taskName):
         url = self.makeUrl('queue/{}', taskName)
